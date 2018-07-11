@@ -115,7 +115,7 @@ class Board:
         return not can_move
 
     def matrix(self):
-        matrix = [[self.cells[row][column].value for row in range(Board.size)] for column in range(Board.size)]
+        matrix = [[self.cells[row][column].value for column in range(Board.size)] for row in range(Board.size)]
         return matrix
 
 
