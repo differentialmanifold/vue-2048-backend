@@ -1,14 +1,21 @@
 from flask import Flask, json, request, Response
+from board import Board
 
 app = Flask(__name__)
 
+board = Board()
 
-@app.route('/')
-def hello_world():
-    board = Board()
 
-    # return 'Hello World!'
-    return transfer_response(board.__dict__)
+@app.route('/init')
+def init():
+    board.__init__()
+    return transfer_response(board.front_call_obj())
+
+
+@app.route('/step/<int:direct>')
+def step(direct):
+    board.move(direct)
+    return transfer_response(board.front_call_obj())
 
 
 def transfer_response(obj, status_code=200):
@@ -18,15 +25,6 @@ def transfer_response(obj, status_code=200):
         mimetype="application/json; charset=UTF-8",
         status=status_code
     )
-
-
-class Board:
-    def __init__(self):
-        self.a = 'a'
-        self.b = 'b'
-
-    def create(self):
-        print('create')
 
 
 if __name__ == '__main__':

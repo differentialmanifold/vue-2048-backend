@@ -14,6 +14,22 @@ class Tile:
         self.mergedInto = None
         Tile.tile_id += 1
         self.id = Tile.tile_id
+        self.is_new = None
+        self.has_moved = None
+        self.from_row = None
+        self.from_column = None
+        self.to_row = None
+        self.to_column = None
+
+    def set_properties(self):
+        self.is_new = self.oldRow == -1 and self.mergedInto is None
+        self.from_row = self.row if self.mergedInto is not None else self.oldRow
+        self.from_column = self.column if self.mergedInto is not None else self.oldColumn
+        self.to_row = self.mergedInto.row if self.mergedInto is not None else self.row
+        self.to_column = self.mergedInto.column if self.mergedInto is not None else self.column
+        self.has_moved = (self.from_row != -1 and
+                          (self.from_row != self.to_row or self.from_column != self.to_column)) or (
+                             self.mergedInto is not None)
 
 
 class Board:
@@ -23,10 +39,12 @@ class Board:
     delta_y = [0, -1, 0, 1]
 
     def __init__(self):
+        Tile.tile_id = 0
         self.tiles = []
         self.cells = [[self.add_tile() for _ in range(Board.size)] for _ in range(Board.size)]
         self.add_random_tile()
         self.set_positions()
+        self.set_tiles_properties()
         self.has_changed = True
         self.won = False
 
@@ -73,6 +91,10 @@ class Board:
                 tile.column = j
                 tile.markForDeletion = False
 
+    def set_tiles_properties(self):
+        for tile in self.tiles:
+            tile.set_properties()
+
     def add_random_tile(self):
         emptyCells = [{'row': i, 'column': j} for i in range(Board.size) for j in range(Board.size) if
                       self.cells[i][j].value == 0]
@@ -98,6 +120,7 @@ class Board:
             self.add_random_tile()
         self.has_changed = has_changed
         self.set_positions()
+        self.set_tiles_properties()
 
     def has_lost(self):
         can_move = False
@@ -117,6 +140,12 @@ class Board:
     def matrix(self):
         matrix = [[self.cells[row][column].value for row in range(Board.size)] for column in range(Board.size)]
         return matrix
+
+    def front_call_obj(self):
+        tiles = [tile.__dict__ for tile in self.tiles]
+        cells = [[tile.__dict__ for tile in row] for row in self.cells]
+
+        return {'tiles': tiles, 'cells': cells, 'hasChanged': self.has_changed, 'won': self.won}
 
 
 def print_matrix(matrix):
