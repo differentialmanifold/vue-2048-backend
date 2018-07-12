@@ -137,6 +137,9 @@ class Board:
                     can_move |= (self.cells[row][column].value == self.cells[new_row][new_column])
         return not can_move
 
+    def has_done(self):
+        return self.won or self.has_lost()
+
     def matrix(self):
         matrix = [[self.cells[row][column].value for column in range(Board.size)] for row in range(Board.size)]
         return matrix
@@ -145,7 +148,8 @@ class Board:
         tiles = [tile.__dict__ for tile in self.tiles]
         cells = [[tile.__dict__ for tile in row] for row in self.cells]
 
-        return {'tiles': tiles, 'cells': cells, 'hasChanged': self.has_changed, 'won': self.won}
+        return {'tiles': tiles, 'cells': cells, 'hasChanged': self.has_changed, 'won': self.won,
+                'done': self.has_done(), 'hasLost': self.has_lost()}
 
 
 def print_matrix(matrix):
