@@ -1,7 +1,9 @@
 from flask import Flask, json, request, Response
+from flask_cors import CORS
 from board import Board
 
 app = Flask(__name__)
+CORS(app)
 
 board = Board()
 
