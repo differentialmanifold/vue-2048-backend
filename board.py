@@ -25,8 +25,8 @@ class Tile:
         self.is_new = self.oldRow == -1 and self.mergedInto is None
         self.from_row = self.row if self.mergedInto is not None else self.oldRow
         self.from_column = self.column if self.mergedInto is not None else self.oldColumn
-        self.to_row = self.mergedInto.row if self.mergedInto is not None else self.row
-        self.to_column = self.mergedInto.column if self.mergedInto is not None else self.column
+        self.to_row = self.mergedInto['row'] if self.mergedInto is not None else self.row
+        self.to_column = self.mergedInto['column'] if self.mergedInto is not None else self.column
         self.has_moved = (self.from_row != -1 and
                           (self.from_row != self.to_row or self.from_column != self.to_column)) or (
                              self.mergedInto is not None)
@@ -71,9 +71,9 @@ class Board:
                 if len(current_row) > 0 and current_row[0].value == target_tile.value:
                     tile1 = target_tile
                     target_tile = self.add_tile(target_tile.value)
-                    tile1.mergedInto = target_tile
+                    tile1.mergedInto = target_tile.__dict__
                     tile2 = current_row.pop(0)
-                    tile2.mergedInto = target_tile
+                    tile2.mergedInto = target_tile.__dict__
                     target_tile.value += tile2.value
                 result_row[target] = target_tile
                 self.won |= (target_tile.value == 2048)
@@ -127,8 +127,6 @@ class Board:
         for row in range(Board.size):
             for column in range(Board.size):
                 can_move |= (self.cells[row][column].value == 0)
-                if can_move:
-                    return not can_move
                 for direct in range(Board.size):
                     new_row = row + Board.delta_x[direct]
                     new_column = column + Board.delta_y[direct]
@@ -160,9 +158,7 @@ def print_matrix(matrix):
 
 
 if __name__ == "__main__":
-    directions = [0, 1, 2, 3]
-    board = Board()
-    print_matrix(board.matrix())
-    for direct in directions:
-        board.move(direct)
-        print_matrix(board.matrix())
+    a = False
+    b = True
+    a |= b
+    print(a)
