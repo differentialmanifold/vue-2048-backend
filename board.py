@@ -132,7 +132,9 @@ class Board:
                     new_column = column + Board.delta_y[direct]
                     if new_row < 0 or new_row >= Board.size or new_column < 0 or new_column >= Board.size:
                         continue
-                    can_move |= (self.cells[row][column].value == self.cells[new_row][new_column])
+                    can_move |= (self.cells[row][column].value == self.cells[new_row][new_column].value)
+                    if can_move:
+                        return not can_move
         return not can_move
 
     def has_done(self):
@@ -158,7 +160,15 @@ def print_matrix(matrix):
 
 
 if __name__ == "__main__":
-    a = False
-    b = True
-    a |= b
-    print(a)
+    def test_lost():
+        can_move = True
+        for row in range(Board.size):
+            for column in range(Board.size):
+                can_move |= False
+
+                for direct in range(Board.size):
+                    can_move |= False
+        print(can_move)
+
+
+    test_lost()
