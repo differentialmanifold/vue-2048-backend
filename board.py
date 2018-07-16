@@ -1,4 +1,5 @@
 import random
+import numpy as np
 
 
 class Tile:
@@ -47,6 +48,7 @@ class Board:
         self.set_tiles_properties()
         self.has_changed = True
         self.won = False
+        self.max_value = 0
 
     def rotate_left(self):
         rows = len(self.cells)
@@ -96,15 +98,15 @@ class Board:
             tile.set_properties()
 
     def add_random_tile(self):
-        emptyCells = [{'row': i, 'column': j} for i in range(Board.size) for j in range(Board.size) if
-                      self.cells[i][j].value == 0]
-        index = random.choice(range(len(emptyCells)))
-        cell = emptyCells[index]
-        newValue = 4 if random.random() < Board.fourProbability else 2
-        self.cells[cell['row']][cell['column']] = self.add_tile(newValue)
+        empty_cells = [{'row': i, 'column': j} for i in range(Board.size) for j in range(Board.size) if
+                       self.cells[i][j].value == 0]
+        _index = random.choice(range(len(empty_cells)))
+        cell = empty_cells[_index]
+        new_value = 4 if random.random() < Board.fourProbability else 2
+        self.cells[cell['row']][cell['column']] = self.add_tile(new_value)
 
     def clear_old_tiles(self):
-        self.tiles = [tile for tile in self.tiles if tile.markForDeletion == False]
+        self.tiles = [tile for tile in self.tiles if tile.markForDeletion is False]
         for tile in self.tiles:
             tile.markForDeletion = True
 
@@ -141,8 +143,8 @@ class Board:
         return self.won or self.has_lost()
 
     def matrix(self):
-        matrix = [[self.cells[row][column].value for column in range(Board.size)] for row in range(Board.size)]
-        return matrix
+        matrix_value = [[self.cells[row][column].value for column in range(Board.size)] for row in range(Board.size)]
+        return np.array(matrix_value)
 
     def front_call_obj(self):
         tiles = [tile.__dict__ for tile in self.tiles]
@@ -151,24 +153,66 @@ class Board:
         return {'tiles': tiles, 'cells': cells, 'hasChanged': self.has_changed, 'won': self.won,
                 'done': self.has_done(), 'hasLost': self.has_lost()}
 
+    def get_reward(self, matrix_value):
+        _reward = 0
+        max_value = np.max(matrix_value)
+        if max_value > self.max_value:
+            _reward = max_value - self.max_value
+            self.max_value = max_value
+        return _reward
 
-def print_matrix(matrix):
+    def env_init(self):
+        self.__init__()
+        _matrix = self.matrix()
+        _reward = self.get_reward(_matrix)
+        return _matrix, _reward, False, self.max_value
+
+    def step(self, _action):
+        self.move(_action)
+        _matrix = self.matrix()
+        _done = False
+
+        if self.has_done():
+            _done = True
+
+        if self.has_changed:
+            _reward = self.get_reward(_matrix)
+        else:
+            _reward = -10
+
+        return _matrix, _reward, _done, self.max_value
+
+
+def print_matrix(_matrix):
     print('---')
     for i in range(4):
-        print(matrix[i])
+        print(_matrix[i])
     print('---')
 
 
 if __name__ == "__main__":
-    def test_lost():
-        can_move = True
-        for row in range(Board.size):
-            for column in range(Board.size):
-                can_move |= False
+    board = Board()
 
-                for direct in range(Board.size):
-                    can_move |= False
-        print(can_move)
+    index = 0
+    matrix, reward, done, value = board.env_init()
 
+    print('****')
+    print('index {}'.format(index))
+    print_matrix(matrix)
+    print('reward {}'.format(reward))
+    print('done {}'.format(done))
+    print('****')
 
-    test_lost()
+    while not done:
+        action = random.choice(range(4))
+        matrix, reward, done, value = board.step(action)
+
+        index += 1
+
+        print('****')
+        print('action {}'.format(action))
+        print('index {}'.format(index))
+        print_matrix(matrix)
+        print('reward {}'.format(reward))
+        print('done {}'.format(done))
+        print('****')
