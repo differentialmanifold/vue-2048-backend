@@ -10,14 +10,16 @@ if "../" not in sys.path:
 
 from board import Board
 
-from collections import deque, namedtuple
+from collections import namedtuple
 
 env = Board()
 
-EpisodeStats = namedtuple("Stats", ["episode_lengths", "episode_rewards"])
+EpisodeStats = namedtuple("Stats", ["episode_lengths", "episode_rewards", "episode_max_value"])
 
 # Actions: 0 (left), 1 (up), 2 (right) and 3 (down) are valid actions
 VALID_ACTIONS = [0, 1, 2, 3]
+LEARNING_RATING = 1e-6
+ADD_TEST = True
 
 
 class Estimator():
@@ -53,18 +55,11 @@ class Estimator():
         X = tf.to_float(self.X_pl)
         batch_size = tf.shape(self.X_pl)[0]
 
-        # Three convolutional layers
-        conv1 = tf.contrib.layers.conv2d(
-            X, 8, 2, 1, activation_fn=tf.nn.relu)
-        conv2 = tf.contrib.layers.conv2d(
-            conv1, 8, 2, 1, activation_fn=tf.nn.relu)
-        conv3 = tf.contrib.layers.conv2d(
-            conv2, 8, 2, 1, activation_fn=tf.nn.relu)
-
         # Fully connected layers
-        flattened = tf.contrib.layers.flatten(conv3)
-        fc1 = tf.contrib.layers.fully_connected(flattened, 32)
-        self.predictions = tf.contrib.layers.fully_connected(fc1, len(VALID_ACTIONS))
+        flattened = tf.contrib.layers.flatten(X)
+        fc1 = tf.contrib.layers.fully_connected(flattened, 256)
+        fc2 = tf.contrib.layers.fully_connected(fc1, 256)
+        self.predictions = tf.contrib.layers.fully_connected(fc2, len(VALID_ACTIONS))
 
         # Get the predictions for the chosen actions only
         gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions_pl
@@ -75,7 +70,7 @@ class Estimator():
         self.loss = tf.reduce_mean(self.losses)
 
         # Optimizer Parameters from original paper
-        self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
+        self.optimizer = tf.train.AdamOptimizer(LEARNING_RATING)
         self.train_op = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
         # Summaries for Tensorboard
@@ -207,7 +202,8 @@ def deep_q_learning(sess,
     # Keeps track of useful statistics
     stats = EpisodeStats(
         episode_lengths=np.zeros(num_episodes),
-        episode_rewards=np.zeros(num_episodes))
+        episode_rewards=np.zeros(num_episodes),
+        episode_max_value=np.zeros(num_episodes))
 
     # Create directories for checkpoints and summaries
     checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
@@ -250,12 +246,45 @@ def deep_q_learning(sess,
             state = next_state
 
     for i_episode in range(num_episodes):
-        episode_max_value = 0
-        episode_score = 0
 
         # Save the current checkpoint
         if i_episode > 0 and i_episode % 100 == 0:
             saver.save(tf.get_default_session(), checkpoint_path)
+
+        if ADD_TEST and i_episode > 0 and i_episode % 10 == 0:
+            test_reward = 0
+            test_length = 0
+            # Reset the environment
+            state, reward, done, max_value, total_score = env.env_init()
+            state = np.stack([state] * 4, axis=2)
+            for t in itertools.count():
+
+                # Epsilon for this time step
+                epsilon = 0.01
+
+                # Take a step
+                action_probs = policy(sess, state, epsilon)
+                action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+                next_state, reward, done, max_value, total_score = env.step(VALID_ACTIONS[action])
+                next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
+
+                # Update statistics
+                test_reward += reward
+                test_length = t
+
+                if done:
+                    break
+
+                state = next_state
+
+            # Add summaries to tensorboard
+            episode_summary = tf.Summary()
+            episode_summary.value.add(simple_value=test_reward, node_name="test_episode_reward",
+                                      tag="test_episode_reward")
+            episode_summary.value.add(simple_value=test_length, node_name="test_episode_length",
+                                      tag="test_episode_length")
+            q_estimator.summary_writer.add_summary(episode_summary, total_t)
+            q_estimator.summary_writer.flush()
 
         # Reset the environment
         state, reward, done, max_value, total_score = env.env_init()
@@ -299,8 +328,7 @@ def deep_q_learning(sess,
             # Update statistics
             stats.episode_rewards[i_episode] += reward
             stats.episode_lengths[i_episode] = t
-            episode_max_value = max_value
-            episode_score = total_score
+            stats.episode_max_value[i_episode] = max_value
 
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
@@ -323,21 +351,21 @@ def deep_q_learning(sess,
             state = next_state
             total_t += 1
 
-        print('episode max value is {}'.format(episode_max_value))
-        print('episode score is {}'.format(episode_score))
-
         # Add summaries to tensorboard
         episode_summary = tf.Summary()
         episode_summary.value.add(simple_value=stats.episode_rewards[i_episode], node_name="episode_reward",
                                   tag="episode_reward")
         episode_summary.value.add(simple_value=stats.episode_lengths[i_episode], node_name="episode_length",
                                   tag="episode_length")
+        episode_summary.value.add(simple_value=stats.episode_max_value[i_episode], node_name="episode_max_value",
+                                  tag="episode_max_value")
         q_estimator.summary_writer.add_summary(episode_summary, total_t)
         q_estimator.summary_writer.flush()
 
         yield total_t, EpisodeStats(
             episode_lengths=stats.episode_lengths[:i_episode + 1],
-            episode_rewards=stats.episode_rewards[:i_episode + 1])
+            episode_rewards=stats.episode_rewards[:i_episode + 1],
+            episode_max_value=stats.episode_max_value[:i_episode + 1])
 
     return stats
 
@@ -362,12 +390,12 @@ with tf.Session() as sess:
                                     target_estimator=target_estimator,
                                     experiment_dir=experiment_dir,
                                     num_episodes=10000,
-                                    replay_memory_size=5000,
-                                    replay_memory_init_size=500,
+                                    replay_memory_size=50000,
+                                    replay_memory_init_size=5000,
                                     update_target_estimator_every=100,
                                     epsilon_start=1.0,
-                                    epsilon_end=0.1,
-                                    epsilon_decay_steps=50000,
+                                    epsilon_end=0.01,
+                                    epsilon_decay_steps=500000,
                                     discount_factor=0.99,
                                     batch_size=32):
         print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))

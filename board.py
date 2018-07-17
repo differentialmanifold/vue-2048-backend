@@ -171,6 +171,8 @@ class Board:
         if self.has_done():
             _done = True
 
+        self.max_value = np.max(_matrix)
+
         return _matrix, self.gain_score, _done, self.max_value, self.total_score
 
 
