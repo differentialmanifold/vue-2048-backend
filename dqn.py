@@ -251,6 +251,7 @@ def deep_q_learning(sess,
 
     for i_episode in range(num_episodes):
         episode_max_value = 0
+        episode_score = 0
 
         # Save the current checkpoint
         if i_episode > 0 and i_episode % 100 == 0:
@@ -277,10 +278,10 @@ def deep_q_learning(sess,
                 copy_model_parameters(sess, q_estimator, target_estimator)
                 print("\nCopied model parameters to target network.")
 
-            # Print out which step we're on, useful for debugging.
-            print("\rStep {} ({}) @ Episode {}/{}, loss: {}".format(
-                t, total_t, i_episode + 1, num_episodes, loss), end="")
-            sys.stdout.flush()
+                # Print out which step we're on, useful for debugging.
+                print("\rStep {} ({}) @ Episode {}/{}, loss: {}".format(
+                    t, total_t, i_episode + 1, num_episodes, loss), end="")
+                sys.stdout.flush()
 
             # Take a step
             action_probs = policy(sess, state, epsilon)
@@ -299,6 +300,7 @@ def deep_q_learning(sess,
             stats.episode_rewards[i_episode] += reward
             stats.episode_lengths[i_episode] = t
             episode_max_value = max_value
+            episode_score = total_score
 
             # Sample a minibatch from the replay memory
             samples = random.sample(replay_memory, batch_size)
@@ -322,6 +324,7 @@ def deep_q_learning(sess,
             total_t += 1
 
         print('episode max value is {}'.format(episode_max_value))
+        print('episode score is {}'.format(episode_score))
 
         # Add summaries to tensorboard
         episode_summary = tf.Summary()
