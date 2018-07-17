@@ -49,6 +49,8 @@ class Board:
         self.has_changed = True
         self.won = False
         self.max_value = 0
+        self.gain_score = 0
+        self.total_score = 0
 
     def rotate_left(self):
         rows = len(self.cells)
@@ -65,12 +67,14 @@ class Board:
 
     def move_left(self):
         has_changed = False
+        self.gain_score = 0
         for row in range(Board.size):
             current_row = [tile for tile in self.cells[row] if tile.value != 0]
             result_row = [None for _ in range(Board.size)]
             for target in range(Board.size):
                 target_tile = current_row.pop(0) if len(current_row) > 0 else self.add_tile()
                 if len(current_row) > 0 and current_row[0].value == target_tile.value:
+                    self.gain_score += target_tile.value
                     tile1 = target_tile
                     target_tile = self.add_tile(target_tile.value)
                     tile1.mergedInto = target_tile.__dict__
@@ -78,9 +82,10 @@ class Board:
                     tile2.mergedInto = target_tile.__dict__
                     target_tile.value += tile2.value
                 result_row[target] = target_tile
-                self.won |= (target_tile.value == 2048)
+                # self.won |= (target_tile.value == 2048)
                 has_changed |= (target_tile.value != self.cells[row][target].value)
             self.cells[row] = result_row
+        self.total_score += self.gain_score
         return has_changed
 
     def set_positions(self):
@@ -153,19 +158,10 @@ class Board:
         return {'tiles': tiles, 'cells': cells, 'hasChanged': self.has_changed, 'won': self.won,
                 'done': self.has_done(), 'hasLost': self.has_lost()}
 
-    def get_reward(self, matrix_value):
-        _reward = 0
-        max_value = np.max(matrix_value)
-        if max_value > self.max_value:
-            _reward = max_value - self.max_value
-            self.max_value = max_value
-        return _reward
-
     def env_init(self):
         self.__init__()
         _matrix = self.matrix()
-        _reward = self.get_reward(_matrix)
-        return _matrix, _reward, False, self.max_value
+        return _matrix, self.gain_score, False, self.max_value, self.total_score
 
     def step(self, _action):
         self.move(_action)
@@ -175,12 +171,7 @@ class Board:
         if self.has_done():
             _done = True
 
-        if self.has_changed:
-            _reward = self.get_reward(_matrix)
-        else:
-            _reward = -10
-
-        return _matrix, _reward, _done, self.max_value
+        return _matrix, self.gain_score, _done, self.max_value, self.total_score
 
 
 def print_matrix(_matrix):
@@ -194,18 +185,19 @@ if __name__ == "__main__":
     board = Board()
 
     index = 0
-    matrix, reward, done, value = board.env_init()
+    matrix, reward, done, value, score = board.env_init()
 
     print('****')
     print('index {}'.format(index))
     print_matrix(matrix)
     print('reward {}'.format(reward))
+    print('score {}'.format(score))
     print('done {}'.format(done))
     print('****')
 
     while not done:
         action = random.choice(range(4))
-        matrix, reward, done, value = board.step(action)
+        matrix, reward, done, value, score = board.step(action)
 
         index += 1
 
@@ -214,5 +206,6 @@ if __name__ == "__main__":
         print('index {}'.format(index))
         print_matrix(matrix)
         print('reward {}'.format(reward))
+        print('score {}'.format(score))
         print('done {}'.format(done))
         print('****')
