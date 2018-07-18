@@ -46,7 +46,7 @@ class Estimator():
         """
 
         # Placeholders for our input
-        self.X_pl = tf.placeholder(shape=[None, 4, 4, 4], dtype=tf.uint8, name="X")
+        self.X_pl = tf.placeholder(shape=[None, 4, 4], dtype=tf.uint8, name="X")
         # The TD target value
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
@@ -86,7 +86,7 @@ class Estimator():
         Predicts action values.
         Args:
           sess: Tensorflow session
-          s: State input of shape [batch_size, 4, 4, 4]
+          s: State input of shape [batch_size, 4, 4]
         Returns:
           Tensor of shape [batch_size, NUM_VALID_ACTIONS] containing the estimated
           action values.
@@ -98,7 +98,7 @@ class Estimator():
         Updates the estimator towards the given targets.
         Args:
           sess: Tensorflow session object
-          s: State input of shape [batch_size, 4, 4, 4]
+          s: State input of shape [batch_size, 4, 4]
           a: Chosen actions of shape [batch_size]
           y: Targets of shape [batch_size]
         Returns:
@@ -221,6 +221,8 @@ def deep_q_learning(sess,
 
     total_t = sess.run(tf.contrib.framework.get_global_step())
 
+    q_estimator.summary_writer.add_graph(sess.graph)
+
     # The epsilon decay schedule
     epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
 
@@ -232,16 +234,13 @@ def deep_q_learning(sess,
     # Populate the replay memory with initial experience
     print("Populating replay memory...")
     state, reward, done, max_value, total_score = env.env_init()
-    state = np.stack([state] * 4, axis=2)
     for i in range(replay_memory_init_size):
         action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps - 1)])
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
         next_state, reward, done, max_value, total_score = env.step(VALID_ACTIONS[action])
-        next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
         replay_memory.append(Transition(state, action, reward, next_state, done))
         if done:
             state, reward, done, max_value, total_score = env.env_init()
-            state = np.stack([state] * 4, axis=2)
         else:
             state = next_state
 
@@ -256,7 +255,6 @@ def deep_q_learning(sess,
             test_length = 0
             # Reset the environment
             state, reward, done, max_value, total_score = env.env_init()
-            state = np.stack([state] * 4, axis=2)
             for t in itertools.count():
 
                 # Epsilon for this time step
@@ -266,7 +264,6 @@ def deep_q_learning(sess,
                 action_probs = policy(sess, state, epsilon)
                 action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
                 next_state, reward, done, max_value, total_score = env.step(VALID_ACTIONS[action])
-                next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
 
                 # Update statistics
                 test_reward += reward
@@ -288,7 +285,6 @@ def deep_q_learning(sess,
 
         # Reset the environment
         state, reward, done, max_value, total_score = env.env_init()
-        state = np.stack([state] * 4, axis=2)
         loss = None
 
         # One step in the environment
@@ -316,7 +312,6 @@ def deep_q_learning(sess,
             action_probs = policy(sess, state, epsilon)
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_state, reward, done, max_value, total_score = env.step(VALID_ACTIONS[action])
-            next_state = np.append(state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:
@@ -389,7 +384,7 @@ with tf.Session() as sess:
                                     q_estimator=q_estimator,
                                     target_estimator=target_estimator,
                                     experiment_dir=experiment_dir,
-                                    num_episodes=10000,
+                                    num_episodes=100000,
                                     replay_memory_size=50000,
                                     replay_memory_init_size=5000,
                                     update_target_estimator_every=100,
