@@ -258,7 +258,7 @@ def deep_q_learning(sess,
             for t in itertools.count():
 
                 # Epsilon for this time step
-                epsilon = 0.01
+                epsilon = 0
 
                 # Take a step
                 action_probs = policy(sess, state, epsilon, can_move_dir)
