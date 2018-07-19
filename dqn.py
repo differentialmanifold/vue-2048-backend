@@ -145,10 +145,10 @@ def make_epsilon_greedy_policy(estimator, nA):
         the probabilities for each action in the form of a numpy array of length nA.
     """
 
-    def policy_fn(sess, observation, epsilon):
+    def policy_fn(sess, observation, epsilon, can_move_dir):
         A = np.ones(nA, dtype=float) * epsilon / nA
         q_values = estimator.predict(sess, np.expand_dims(observation, 0))[0]
-        best_action = np.argmax(q_values)
+        best_action = np.argmax(np.array(q_values) * np.array(can_move_dir).astype(int))
         A[best_action] += (1.0 - epsilon)
         return A
 
@@ -233,14 +233,14 @@ def deep_q_learning(sess,
 
     # Populate the replay memory with initial experience
     print("Populating replay memory...")
-    state, reward, done, max_value, total_score = env.env_init()
+    state, can_move_dir = env.env_init()
     for i in range(replay_memory_init_size):
-        action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps - 1)])
+        action_probs = policy(sess, state, epsilons[min(total_t, epsilon_decay_steps - 1)], can_move_dir)
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
-        next_state, reward, done, max_value, total_score = env.step(VALID_ACTIONS[action])
+        next_state, reward, done, max_value, total_score, can_move_dir = env.step(VALID_ACTIONS[action])
         replay_memory.append(Transition(state, action, reward, next_state, done))
         if done:
-            state, reward, done, max_value, total_score = env.env_init()
+            state, can_move_dir = env.env_init()
         else:
             state = next_state
 
@@ -254,16 +254,16 @@ def deep_q_learning(sess,
             test_reward = 0
             test_length = 0
             # Reset the environment
-            state, reward, done, max_value, total_score = env.env_init()
+            state, can_move_dir = env.env_init()
             for t in itertools.count():
 
                 # Epsilon for this time step
                 epsilon = 0.01
 
                 # Take a step
-                action_probs = policy(sess, state, epsilon)
+                action_probs = policy(sess, state, epsilon, can_move_dir)
                 action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
-                next_state, reward, done, max_value, total_score = env.step(VALID_ACTIONS[action])
+                next_state, reward, done, max_value, total_score, can_move_dir = env.step(VALID_ACTIONS[action])
 
                 # Update statistics
                 test_reward += reward
@@ -284,7 +284,7 @@ def deep_q_learning(sess,
             q_estimator.summary_writer.flush()
 
         # Reset the environment
-        state, reward, done, max_value, total_score = env.env_init()
+        state, can_move_dir = env.env_init()
         loss = None
 
         # One step in the environment
@@ -309,9 +309,9 @@ def deep_q_learning(sess,
                 sys.stdout.flush()
 
             # Take a step
-            action_probs = policy(sess, state, epsilon)
+            action_probs = policy(sess, state, epsilon, can_move_dir)
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
-            next_state, reward, done, max_value, total_score = env.step(VALID_ACTIONS[action])
+            next_state, reward, done, max_value, total_score, can_move_dir = env.step(VALID_ACTIONS[action])
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:
@@ -387,10 +387,13 @@ with tf.Session() as sess:
                                     num_episodes=100000,
                                     replay_memory_size=50000,
                                     replay_memory_init_size=5000,
-                                    update_target_estimator_every=100,
+                                    update_target_estimator_every=10000,
                                     epsilon_start=1.0,
                                     epsilon_end=0.01,
                                     epsilon_decay_steps=500000,
                                     discount_factor=0.99,
                                     batch_size=32):
-        print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))
+        print("\nepisode: {} step: {} length: {} Reward: {} maxvalue: {}".format(len(stats.episode_lengths), t,
+                                                                                 stats.episode_lengths[-1],
+                                                                                 stats.episode_rewards[-1],
+                                                                                 stats.episode_max_value[-1]))

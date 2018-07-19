@@ -51,6 +51,8 @@ class Board:
         self.max_value = 0
         self.gain_score = 0
         self.total_score = 0
+        self.lost = False
+        self.can_move_dir = [False, False, False, False]
 
     def rotate_left(self):
         rows = len(self.cells)
@@ -129,20 +131,44 @@ class Board:
         self.set_positions()
         self.set_tiles_properties()
 
-    def has_lost(self):
-        can_move = False
+    def can_swipe_left(self):
+        """
+        compare adjacent cells
+        two condition can move:
+        1. first cell is empty and second cell is not empty
+        2. two cells not empty and value is equal
+        """
         for row in range(Board.size):
-            for column in range(Board.size):
-                can_move |= (self.cells[row][column].value == 0)
-                for direct in range(Board.size):
-                    new_row = row + Board.delta_x[direct]
-                    new_column = column + Board.delta_y[direct]
-                    if new_row < 0 or new_row >= Board.size or new_column < 0 or new_column >= Board.size:
-                        continue
-                    can_move |= (self.cells[row][column].value == self.cells[new_row][new_column].value)
-                    if can_move:
-                        return not can_move
-        return not can_move
+            for column in range(Board.size - 1):
+                first_value = self.cells[row][column].value
+                second_value = self.cells[row][column + 1].value
+                if first_value == 0 and second_value != 0:
+                    return True
+                if first_value != 0 and second_value != 0 and first_value == second_value:
+                    return True
+        return False
+
+    def check_swipe_all_direction(self):
+        # left, up, right, down
+        for i in range(Board.size):
+            self.can_move_dir[i] = self.can_swipe_left()
+            self.rotate_left()
+
+    def has_lost(self):
+        # can_move = False
+        # for row in range(Board.size):
+        #     for column in range(Board.size):
+        #         can_move |= (self.cells[row][column].value == 0)
+        #         for direct in range(Board.size):
+        #             new_row = row + Board.delta_x[direct]
+        #             new_column = column + Board.delta_y[direct]
+        #             if new_row < 0 or new_row >= Board.size or new_column < 0 or new_column >= Board.size:
+        #                 continue
+        #             can_move |= (self.cells[row][column].value == self.cells[new_row][new_column].value)
+        #             if can_move:
+        #                 return not can_move
+        # return not can_move
+        return not any(self.can_move_dir)
 
     def has_done(self):
         return self.won or self.has_lost()
@@ -160,11 +186,15 @@ class Board:
 
     def env_init(self):
         self.__init__()
+        self.check_swipe_all_direction()
         _matrix = self.matrix()
-        return _matrix, self.gain_score, False, self.max_value, self.total_score
+        return _matrix, self.can_move_dir
 
     def step(self, _action):
         self.move(_action)
+
+        self.check_swipe_all_direction()
+
         _matrix = self.matrix()
         _done = False
 
@@ -173,7 +203,7 @@ class Board:
 
         self.max_value = np.max(_matrix)
 
-        return _matrix, self.gain_score, _done, self.max_value, self.total_score
+        return _matrix, self.gain_score, _done, self.max_value, self.total_score, self.can_move_dir
 
 
 def print_matrix(_matrix):
@@ -187,19 +217,17 @@ if __name__ == "__main__":
     board = Board()
 
     index = 0
-    matrix, reward, done, value, score = board.env_init()
+    matrix = board.env_init()
 
     print('****')
     print('index {}'.format(index))
     print_matrix(matrix)
-    print('reward {}'.format(reward))
-    print('score {}'.format(score))
-    print('done {}'.format(done))
     print('****')
+    done = False
 
     while not done:
         action = random.choice(range(4))
-        matrix, reward, done, value, score = board.step(action)
+        matrix, reward, done, value, score, can_move_dir = board.step(action)
 
         index += 1
 
@@ -210,4 +238,5 @@ if __name__ == "__main__":
         print('reward {}'.format(reward))
         print('score {}'.format(score))
         print('done {}'.format(done))
+        print('can move dir {}'.format(can_move_dir))
         print('****')
