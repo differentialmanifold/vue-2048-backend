@@ -155,19 +155,6 @@ class Board:
             self.rotate_left()
 
     def has_lost(self):
-        # can_move = False
-        # for row in range(Board.size):
-        #     for column in range(Board.size):
-        #         can_move |= (self.cells[row][column].value == 0)
-        #         for direct in range(Board.size):
-        #             new_row = row + Board.delta_x[direct]
-        #             new_column = column + Board.delta_y[direct]
-        #             if new_row < 0 or new_row >= Board.size or new_column < 0 or new_column >= Board.size:
-        #                 continue
-        #             can_move |= (self.cells[row][column].value == self.cells[new_row][new_column].value)
-        #             if can_move:
-        #                 return not can_move
-        # return not can_move
         return not any(self.can_move_dir)
 
     def has_done(self):
