@@ -1,8 +1,11 @@
 from mcts.Tree import Tree, State
 
 
-def select_promissing_node(node):
-    pass
+def select_promissing_node(root_node):
+    node = root_node
+    while len(node.children > 0):
+        node = node.find_best_node_with_utc()
+    return node
 
 
 def expand_node(promising_node):
@@ -12,8 +15,10 @@ def expand_node(promising_node):
 def simulate_random_result(node_to_explore):
     pass
 
+
 def back_propogation(node_to_explore, playout_result):
     pass
+
 
 class MonteCarloTreeSearch:
     def find_next_move(self, board):
@@ -35,4 +40,3 @@ class MonteCarloTreeSearch:
         best_node = tree.node.get_child_with_max_score()
 
         return best_node.pre_action
-
