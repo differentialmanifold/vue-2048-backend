@@ -1,4 +1,7 @@
-import sys, math
+import math
+import random
+import sys
+
 from mcts.State import State
 
 
@@ -20,6 +23,17 @@ class Node:
         parent_visit = self.state.visit_count
         return max(self.children,
                    key=lambda item: utc_value(parent_visit, item.state.win_score, item.state.visit_count))
+
+    def get_random_child_node(self):
+        child_node_size = len(self.children)
+        if child_node_size == 0:
+            return None
+
+        index = random.choice(range(child_node_size))
+        return self.children[index]
+
+    def get_child_with_max_score(self):
+        return max(self.children, key=lambda item: item.state.win_score)
 
 
 class Tree:

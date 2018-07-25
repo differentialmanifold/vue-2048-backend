@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from mcts.MonteCarloTreeSearch import MonteCarloTreeSearch
 
 
 class Tile:
@@ -160,6 +161,7 @@ def print_matrix(_matrix):
 
 if __name__ == "__main__":
     board = Board()
+    mcts = MonteCarloTreeSearch()
 
     index = 0
     matrix, can_move_dir = board.env_init()
@@ -171,7 +173,8 @@ if __name__ == "__main__":
     done = False
 
     while not done:
-        action = random.choice(range(4))
+        # action = random.choice(range(4))
+        action = mcts.find_next_move(board)
         matrix, reward, done, value, score, can_move_dir = board.step(action)
 
         index += 1
