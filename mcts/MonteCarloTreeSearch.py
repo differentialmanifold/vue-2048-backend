@@ -1,4 +1,5 @@
-from mcts.Tree import Tree, State
+from mcts.Tree import Tree, Node
+from mcts.State import State
 
 
 def select_promissing_node(root_node):
@@ -9,7 +10,21 @@ def select_promissing_node(root_node):
 
 
 def expand_node(promising_node):
-    pass
+    board = promising_node.state.board
+    can_move_dir = board.can_move_dir
+
+    states = []
+    for i in range(len(can_move_dir)):
+        if can_move_dir[i]:
+            new_board = board.copy()
+            new_board.step(i)
+            state = State(new_board)
+            states.append(state)
+
+    for i in range(len(states)):
+        new_node = Node(states[i])
+        new_node.parent = promising_node
+        promising_node.children.append(new_node)
 
 
 def simulate_random_result(node_to_explore):

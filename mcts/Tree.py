@@ -9,8 +9,10 @@ def utc_value(total_visit, node_win_score, node_visit):
 
 
 class Node:
-    def __init__(self):
-        self.state = State()
+    def __init__(self, state=None):
+        if state is None:
+            state = State()
+        self.state = state
         self.parent = None
         self.children = []
 

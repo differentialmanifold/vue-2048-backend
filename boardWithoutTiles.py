@@ -25,10 +25,11 @@ class Board:
         self.total_score = 0
         self.lost = False
         self.can_move_dir = [False, False, False, False]
+        self.last_action = -1
 
     def copy(self):
         board_copy = Board()
-        board_copy.cells = [[Tile(self.cells[i][j].value) for j in range(Board.size)] for i in range(Board.size)]
+        board_copy.cells = [[Tile(self.cells[i][j].value, i, j) for j in range(Board.size)] for i in range(Board.size)]
         board_copy.has_changed = self.has_changed
         board_copy.max_value = self.max_value
         board_copy.gain_score = self.gain_score
@@ -91,6 +92,7 @@ class Board:
             self.rotate_left()
         if has_changed:
             self.add_random_tile()
+        self.last_action = direction
         self.has_changed = has_changed
         self.set_positions()
 
