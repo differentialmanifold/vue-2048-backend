@@ -22,7 +22,6 @@ class Board:
         self.set_positions()
         self.has_changed = True
         self.max_value = 0
-        self.gain_score = 0
         self.total_score = 0
         self.lost = False
         self.can_move_dir = [False, False, False, False]
@@ -33,7 +32,6 @@ class Board:
         board_copy.cells = [[Tile(self.cells[i][j].value, i, j) for j in range(Board.size)] for i in range(Board.size)]
         board_copy.has_changed = self.has_changed
         board_copy.max_value = self.max_value
-        board_copy.gain_score = self.gain_score
         board_copy.total_score = self.total_score
         board_copy.lost = self.lost
         board_copy.can_move_dir = self.can_move_dir[:]
@@ -52,21 +50,18 @@ class Board:
 
     def move_left(self):
         has_changed = False
-        self.gain_score = 0
         for row in range(Board.size):
             current_row = [tile for tile in self.cells[row] if tile.value != 0]
             result_row = [None for _ in range(Board.size)]
             for target in range(Board.size):
                 target_tile = current_row.pop(0) if len(current_row) > 0 else self.add_tile()
                 if len(current_row) > 0 and current_row[0].value == target_tile.value:
-                    self.gain_score += target_tile.value
                     target_tile = self.add_tile(target_tile.value)
                     tile2 = current_row.pop(0)
                     target_tile.value += tile2.value
                 result_row[target] = target_tile
                 has_changed |= (target_tile.value != self.cells[row][target].value)
             self.cells[row] = result_row
-        self.total_score += self.gain_score
         return has_changed
 
     def set_positions(self):
@@ -149,7 +144,9 @@ class Board:
 
         self.max_value = np.max(_matrix)
 
-        return _matrix, self.gain_score, _done, self.max_value, self.total_score, self.can_move_dir
+        self.total_score = np.sum(_matrix) / 500
+
+        return _matrix, _done, self.max_value, self.total_score, self.can_move_dir
 
 
 def print_matrix(_matrix):
@@ -175,7 +172,7 @@ if __name__ == "__main__":
     while not done:
         # action = random.choice(range(4))
         action = mcts.find_next_move(board)
-        matrix, reward, done, value, score, can_move_dir = board.step(action)
+        matrix, done, value, score, can_move_dir = board.step(action)
 
         index += 1
 
@@ -183,7 +180,6 @@ if __name__ == "__main__":
         print('action {}'.format(action))
         print('index {}'.format(index))
         print_matrix(matrix)
-        print('reward {}'.format(reward))
         print('score {}'.format(score))
         print('done {}'.format(done))
         print('can move dir {}'.format(can_move_dir))

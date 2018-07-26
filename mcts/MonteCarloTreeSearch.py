@@ -34,7 +34,7 @@ def simulate_random_result(node_to_explore):
     total_score = new_state.board.total_score
 
     while not done:
-        matrix, _, done, max_value, total_score, _ = new_state.random_play()
+        matrix, done, max_value, total_score, _ = new_state.random_play()
     return total_score
 
 
@@ -49,7 +49,7 @@ def back_propogation(node_to_explore, playout_result):
 class MonteCarloTreeSearch:
     def find_next_move(self, board):
         tree = Tree()
-        tree.node.state.board = board
+        tree.node.state.board = board.copy()
 
         for i in range(1000):
             # print('index is : {}'.format(i))

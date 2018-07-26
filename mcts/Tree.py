@@ -33,7 +33,12 @@ class Node:
         return self.children[index]
 
     def get_child_with_max_score(self):
-        return max(self.children, key=lambda item: item.state.win_score)
+        for i in range(len(self.children)):
+            child = self.children[i]
+            print(
+                'direction {} visitcount {} winscore {}'.format(child.state.board.last_action, child.state.visit_count,
+                                                                child.state.win_score))
+        return max(self.children, key=lambda item: item.state.visit_count)
 
 
 class Tree:
