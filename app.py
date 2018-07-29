@@ -1,22 +1,31 @@
 from flask import Flask, json, request, Response
 from flask_cors import CORS
 from board import Board
+from mcts.MonteCarloTreeSearch import MonteCarloTreeSearch
 
 app = Flask(__name__)
 CORS(app)
 
 board = Board()
+monte_carlo_tree_search = MonteCarloTreeSearch()
 
 
 @app.route('/init')
 def init():
-    board.__init__()
+    board.env_init()
     return transfer_response(board.front_call_obj())
 
 
 @app.route('/step/<int:direct>')
 def step(direct):
-    board.move(direct)
+    board.step(direct)
+    return transfer_response(board.front_call_obj())
+
+
+@app.route('/autostep')
+def autostep():
+    direct = monte_carlo_tree_search.find_next_move(board.matrix())
+    board.step(direct)
     return transfer_response(board.front_call_obj())
 
 

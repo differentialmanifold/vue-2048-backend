@@ -1,5 +1,14 @@
+import time
+import os
+import sys
+from datetime import datetime
+
+if "../" not in sys.path:
+    sys.path.append("../")
+
 from mcts.Tree import Tree, Node
 from mcts.State import State
+from boardWithoutTiles import BoardForTrain
 
 
 def select_promissing_node(root_node):
@@ -46,12 +55,45 @@ def back_propogation(node_to_explore, playout_result):
         temp_node = temp_node.parent
 
 
-class MonteCarloTreeSearch:
-    def find_next_move(self, board):
-        tree = Tree()
-        tree.node.state.board = board.copy()
+def print_matrix(_matrix):
+    print('---')
+    for i in range(4):
+        print(_matrix[i])
+    print('---')
 
-        for i in range(1000):
+
+class RecycleSolver:
+    def __init__(self, recycle_type, value):
+        self.recycle_type = recycle_type
+        self.value = value
+        self.current_milli_time = lambda: int(round(time.time() * 1000))
+        self.start = self.current_milli_time()
+        self.end = self.start + self.value
+        self.count = 0
+
+    def calculate(self):
+        if self.recycle_type:
+            return self.current_milli_time() < self.end
+        self.count += 1
+        return self.count <= self.value
+
+
+class MonteCarloTreeSearch:
+    def __init__(self, recycle_type=0, value=100):
+        """
+        init monte carlo rollout way
+        :param recycle_type: 0 for rollout a fixed number, 1 for rollout a fixed range of time(ms)
+        :param value: count value or time value(ms)
+        """
+        self.recycle_type = recycle_type
+        self.value = value
+
+    def find_next_move(self, matrix):
+        tree = Tree()
+        tree.node.state.board = BoardForTrain(matrix)
+        recycle_solver = RecycleSolver(self.recycle_type, self.value)
+
+        while recycle_solver.calculate():
             # print('index is : {}'.format(i))
             promising_node = select_promissing_node(tree.node)
 
@@ -67,3 +109,50 @@ class MonteCarloTreeSearch:
         best_node = tree.node.get_child_with_max_score()
 
         return best_node.state.board.last_action
+
+    def complete_play(self):
+        board = BoardForTrain()
+
+        index = 0
+        board.env_init()
+
+        done = False
+
+        while not done:
+            action = self.find_next_move(board.matrix())
+            matrix, done, value, score, can_move_dir = board.step(action)
+
+            index += 1
+
+            print('****')
+            print('action {}'.format(action))
+            print('index {}'.format(index))
+            print_matrix(matrix)
+            print('score {}'.format(score))
+            print('done {}'.format(done))
+            print('can move dir {}'.format(can_move_dir))
+            print('****')
+        return value
+
+
+if __name__ == "__main__":
+    a = range(100, 1500, 400)
+    b = range(1000, 15000, 4000)
+
+    current_path = os.path.dirname(os.path.abspath(__file__))
+
+    file_path = os.path.join(current_path, 'workfile.txt')
+
+    for i in range(5):
+        for j in range(4):
+            mcts0 = MonteCarloTreeSearch(0, a[j])
+            value = mcts0.complete_play()
+            with open(file_path, 'a+') as f:
+                f.write('{} step {} count {} value {} \n'.format(str(datetime.now()), i, a[j], value))
+            print('{} step {} count {} value {} \n'.format(str(datetime.now()), i, a[j], value))
+
+            mcts1 = MonteCarloTreeSearch(1, b[j])
+            value = mcts1.complete_play()
+            with open(file_path, 'a+') as f:
+                f.write('{} step {} time {} value {} \n'.format(str(datetime.now()), i, b[j], value))
+            print('{} step {} time {} value {} \n'.format(str(datetime.now()), i, b[j], value))
