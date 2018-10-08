@@ -150,7 +150,7 @@ class Board:
 
     def check_swipe_all_direction(self):
         # left, up, right, down
-        for i in range(Board.size):
+        for i in range(4):
             self.can_move_dir[i] = self.can_swipe_left()
             self.rotate_left()
 
@@ -195,7 +195,7 @@ class Board:
 
 def print_matrix(_matrix):
     print('---')
-    for i in range(4):
+    for i in range(len(_matrix)):
         print(_matrix[i])
     print('---')
 
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     done = False
 
     while not done:
-        action = random.choice(range(4))
+        action = random.choice(range(board.size))
         matrix, reward, done, value, score, can_move_dir = board.step(action)
 
         index += 1

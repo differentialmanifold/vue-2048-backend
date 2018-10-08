@@ -7,7 +7,7 @@ app = Flask(__name__)
 CORS(app)
 
 board = Board()
-monte_carlo_tree_search = MonteCarloTreeSearch()
+monte_carlo_tree_search = MonteCarloTreeSearch(1, 1000)
 
 
 @app.route('/init')

@@ -136,23 +136,32 @@ class MonteCarloTreeSearch:
 
 
 if __name__ == "__main__":
-    a = range(100, 1500, 400)
-    b = range(1000, 15000, 4000)
+    b = range(100, 2000, 300)
 
     current_path = os.path.dirname(os.path.abspath(__file__))
 
-    file_path = os.path.join(current_path, 'workfile.txt')
+    file_path = os.path.join(current_path, 'statistic.txt')
 
-    for i in range(5):
-        for j in range(4):
-            mcts0 = MonteCarloTreeSearch(0, a[j])
-            value = mcts0.complete_play()
-            with open(file_path, 'a+') as f:
-                f.write('{} step {} count {} value {} \n'.format(str(datetime.now()), i, a[j], value))
-            print('{} step {} count {} value {} \n'.format(str(datetime.now()), i, a[j], value))
-
-            mcts1 = MonteCarloTreeSearch(1, b[j])
+    for time_interval in b:
+        total = 0
+        p512 = 0
+        p1024 = 0
+        p2048 = 0
+        p4096 = 0
+        for j in range(100):
+            mcts1 = MonteCarloTreeSearch(1, time_interval)
             value = mcts1.complete_play()
-            with open(file_path, 'a+') as f:
-                f.write('{} step {} time {} value {} \n'.format(str(datetime.now()), i, b[j], value))
-            print('{} step {} time {} value {} \n'.format(str(datetime.now()), i, b[j], value))
+            total += 1
+            if value >= 512:
+                p512 += 1
+            if value >= 1024:
+                p1024 += 1
+            if value >= 2048:
+                p2048 += 1
+            if value >= 4096:
+                p4096 += 1
+        with open(file_path, 'a+') as f:
+            f.write(
+                '{} time {} p512 {} p1024 {} p2048 {} p4096 {} total {} \n'.format(str(datetime.now()), time_interval,
+                                                                                   p512,
+                                                                                   p1024, p2048, p4096, total))
