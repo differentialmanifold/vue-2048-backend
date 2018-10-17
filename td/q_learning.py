@@ -120,7 +120,7 @@ def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
 
 
 def test_Q(tensorBoardPlot, Q, step):
-    board_without_tiles = BoardForTrain()
+    board_without_tiles = BoardForTrain(size=int(args['size']))
 
     policy = make_epsilon_greedy_policy(Q, 0, board_without_tiles.action_space)
 
@@ -129,7 +129,7 @@ def test_Q(tensorBoardPlot, Q, step):
 
     test_episodes = 1000
     for i in range(test_episodes):
-        board_without_tiles = BoardForTrain()
+        board_without_tiles = BoardForTrain(size=int(args['size']))
         while not board_without_tiles.has_done():
             status = board_without_tiles.transferMatrixToTuple(board_without_tiles.matrix())
             action = np.argmax(policy(status, board_without_tiles.can_move_dir))
