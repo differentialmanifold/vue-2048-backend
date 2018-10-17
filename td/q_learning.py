@@ -67,11 +67,12 @@ def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
 
     # The final action-value function.
     # A nested dictionary that maps state -> (action -> action-value).
-    if os.path.isfile(q_learning_scope + '.pickle'):
-        with open(q_learning_scope + '.pickle', 'rb') as f:
-            Q = pickle.load(f)
-    else:
-        Q = defaultdict(actions)
+    # if os.path.isfile(q_learning_scope + '.pickle'):
+    #     with open(q_learning_scope + '.pickle', 'rb') as f:
+    #         Q = pickle.load(f)
+    # else:
+    #     Q = defaultdict(actions)
+    Q = defaultdict(actions)
 
     tensorBoardPlot = TensorBoardPlot(scope=q_learning_scope, summaries_dir=os.path.dirname(os.path.abspath(__file__)))
 
@@ -113,8 +114,8 @@ def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
             print("Episode {}.".format(i_episode + 1))
             test_Q(tensorBoardPlot, Q, i_episode)
 
-            with open(q_learning_scope + '.pickle', 'wb') as f:
-                pickle.dump(Q, f, pickle.HIGHEST_PROTOCOL)
+            # with open(q_learning_scope + '.pickle', 'wb') as f:
+            #     pickle.dump(Q, f, pickle.HIGHEST_PROTOCOL)
 
     return Q
 
