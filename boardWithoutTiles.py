@@ -147,7 +147,7 @@ class BoardForTrain:
         return np.array(matrix_value)
 
     def env_init(self):
-        self.__init__()
+        self.__init__(size=self.size)
         _matrix = self.matrix()
         return _matrix, self.can_move_dir
 
