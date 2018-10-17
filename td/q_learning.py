@@ -108,7 +108,7 @@ def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
                 break
 
         # Print out which episode we're on, useful for debugging.
-        if (i_episode + 1) % args['outputInterval'] == 0:
+        if (i_episode + 1) % int(args['outputInterval']) == 0:
             print('----------')
             print("Episode {}.".format(i_episode + 1))
             test_Q(tensorBoardPlot, Q, i_episode)
@@ -170,6 +170,6 @@ if __name__ == '__main__':
     parser.add_argument('--outputInterval', help='interval to print test value', default=100)
     args = vars(parser.parse_args())
 
-    board_without_tiles = BoardForTrain(size=args['size'])
+    board_without_tiles = BoardForTrain(size=int(args['size']))
 
     Q = q_learning(board_without_tiles, args)
