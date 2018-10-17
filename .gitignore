@@ -1,5 +1,9 @@
 *.pyc
+*.out
+*.err
+*.pickle
 __pycache__
 *~
 .idea/*
 experiments/*
+*/summaries_*/*

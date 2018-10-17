@@ -34,7 +34,7 @@ class Tile:
 
 
 class Board:
-    size = 4
+    size = 2
     fourProbability = 0.1
     delta_x = [-1, 0, 1, 0]
     delta_y = [0, -1, 0, 1]

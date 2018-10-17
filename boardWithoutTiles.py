@@ -1,6 +1,11 @@
 import random
 import numpy as np
 
+LEFT = 0
+UP = 1
+RIGHT = 2
+DOWN = 3
+
 
 class TileForTrain:
     def __init__(self, value=0, row=-1, column=-1):
@@ -10,7 +15,8 @@ class TileForTrain:
 
 
 class BoardForTrain:
-    size = 4
+    size = 2
+    action_space = 4
     fourProbability = 0.1
     delta_x = [-1, 0, 1, 0]
     delta_y = [0, -1, 0, 1]
@@ -20,7 +26,8 @@ class BoardForTrain:
             self.cells = [[self.add_tile() for _ in range(BoardForTrain.size)] for _ in range(BoardForTrain.size)]
             self.add_random_tile()
         else:
-            self.cells = [[self.add_tile(matrix[i][j]) for j in range(BoardForTrain.size)] for i in range(BoardForTrain.size)]
+            self.cells = [[self.add_tile(matrix[i][j]) for j in range(BoardForTrain.size)] for i in
+                          range(BoardForTrain.size)]
 
         self.set_positions()
         self.has_changed = True
@@ -29,10 +36,13 @@ class BoardForTrain:
         self.lost = False
         self.can_move_dir = self.check_swipe_all_direction()
         self.last_action = -1
+        self.reward = 0
+        self.num_status = 0
 
     def copy(self):
         board_copy = BoardForTrain()
-        board_copy.cells = [[TileForTrain(self.cells[i][j].value, i, j) for j in range(BoardForTrain.size)] for i in range(BoardForTrain.size)]
+        board_copy.cells = [[TileForTrain(self.cells[i][j].value, i, j) for j in range(BoardForTrain.size)] for i in
+                            range(BoardForTrain.size)]
         board_copy.has_changed = self.has_changed
         board_copy.max_value = self.max_value
         board_copy.total_score = self.total_score
@@ -81,8 +91,11 @@ class BoardForTrain:
         cell = empty_cells[_index]
         new_value = 4 if random.random() < BoardForTrain.fourProbability else 2
         self.cells[cell['row']][cell['column']] = self.add_tile(new_value)
+        self.reward = new_value
 
     def move(self, direction):
+        self.reward = 0
+
         # 0 -> left, 1 -> up, 2 -> right, 3 -> down
         for _ in range(direction):
             self.rotate_left()
@@ -116,7 +129,7 @@ class BoardForTrain:
     def check_swipe_all_direction(self):
         can_move_dir = [False, False, False, False]
         # left, up, right, down
-        for i in range(BoardForTrain.size):
+        for i in range(4):
             can_move_dir[i] = self.can_swipe_left()
             self.rotate_left()
         return can_move_dir
@@ -128,13 +141,17 @@ class BoardForTrain:
         return self.has_lost()
 
     def matrix(self):
-        matrix_value = [[self.cells[row][column].value for column in range(BoardForTrain.size)] for row in range(BoardForTrain.size)]
+        matrix_value = [[self.cells[row][column].value for column in range(BoardForTrain.size)] for row in
+                        range(BoardForTrain.size)]
         return np.array(matrix_value)
 
     def env_init(self):
         self.__init__()
         _matrix = self.matrix()
         return _matrix, self.can_move_dir
+
+    def reset(self):
+        return self.env_init()
 
     def step(self, _action):
         self.move(_action)
@@ -149,14 +166,113 @@ class BoardForTrain:
 
         self.total_score = np.sum(_matrix) / 500
 
-        return _matrix, _done, self.max_value, self.total_score, self.can_move_dir
+        return _matrix, self.reward, _done, self.max_value, self.total_score, self.can_move_dir
+
+    def createTransitionProbability(self):
+        P = {}
+
+        shape_length = self.power(self.size, 2)
+        shape_value = shape_length + 2
+        shape = []
+        for i in range(shape_length):
+            shape.append(shape_value)
+
+        nS = np.prod(shape)
+        grid = np.arange(nS).reshape(shape)
+        it = np.nditer(grid, flags=['multi_index'])
+
+        while not it.finished:
+            multi_index = it.multi_index
+            P[multi_index] = {a: [] for a in range(4)}
+
+            matrix_value = self.transferTupleToMatrix(multi_index)
+
+            for direction in [LEFT, UP, RIGHT, DOWN]:
+                board_for_train = BoardForTrain(matrix_value)
+                board_for_train.reward = 0
+
+                for _ in range(direction):
+                    board_for_train.rotate_left()
+                has_changed = board_for_train.move_left()
+                for _ in range(direction, 4):
+                    board_for_train.rotate_left()
+
+                moved_matrix = board_for_train.matrix()
+                if has_changed:
+                    empty_cells = [{'row': i, 'column': j} for i in range(BoardForTrain.size) for j in
+                                   range(BoardForTrain.size) if
+                                   board_for_train.cells[i][j].value == 0]
+
+                    for _index in range(len(empty_cells)):
+                        for new_value, probability in [(4, 0.1), (2, 0.9)]:
+                            board_for_train = BoardForTrain(moved_matrix)
+                            cell = empty_cells[_index]
+                            board_for_train.cells[cell['row']][cell['column']] = board_for_train.add_tile(new_value)
+                            board_for_train.reward = new_value
+                            board_for_train.set_positions()
+                            board_for_train.can_move_dir = board_for_train.check_swipe_all_direction()
+                            P[multi_index][direction].append(
+                                (probability / len(empty_cells), self.transferMatrixToTuple(board_for_train.matrix()),
+                                 board_for_train.reward,
+                                 board_for_train.has_done()))
+                else:
+                    board_for_train.set_positions()
+                    board_for_train.can_move_dir = board_for_train.check_swipe_all_direction()
+                    P[multi_index][direction].append(
+                        (0.0, self.transferMatrixToTuple(moved_matrix), board_for_train.reward,
+                         board_for_train.has_done()))
+
+            it.iternext()
+        return P
+
+    def power(self, a, b):
+        result = 1
+        for i in range(b):
+            result = result * a
+        return result
+
+    def log(self, sub, value):
+        if value == 0:
+            return 0
+        result = 0
+        cal_value = 1
+        while cal_value < value:
+            result = result + 1
+            cal_value = cal_value * sub
+        if cal_value != value:
+            return -1
+        return result
+
+    def transferTupleToMatrix(self, tuple_value):
+        if len(tuple_value) != self.power(self.size, 2):
+            raise ValueError("tuple not match matrix")
+
+        matrix_value = np.zeros(shape=[BoardForTrain.size, BoardForTrain.size])
+
+        for i in range(BoardForTrain.size):
+            for j in range(BoardForTrain.size):
+                tuple_item = tuple_value[BoardForTrain.size * i + j]
+                if tuple_item != 0:
+                    matrix_value[i][j] = self.power(2, tuple_item)
+        return matrix_value
+
+    def transferMatrixToTuple(self, matrix_value):
+        tuple_arr = np.zeros(shape=matrix_value.size)
+        for i in range(BoardForTrain.size):
+            for j in range(BoardForTrain.size):
+                tuple_arr[BoardForTrain.size * i + j] = self.log(2, matrix_value[i][j])
+        return tuple(tuple_arr)
 
 
 if __name__ == "__main__":
     board = BoardForTrain()
     print(board.matrix())
     board.move(1)
+    print(board.matrix())
     board.move(2)
     print(board.matrix())
     new_board = BoardForTrain(board.matrix())
     print(new_board.matrix())
+
+    trainsition_probability = new_board.createTransitionProbability()
+    print(trainsition_probability)

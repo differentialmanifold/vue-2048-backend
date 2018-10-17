@@ -43,7 +43,7 @@ def simulate_random_result(node_to_explore):
     total_score = new_state.board.total_score
 
     while not done:
-        matrix, done, max_value, total_score, _ = new_state.random_play()
+        matrix, reward, done, max_value, total_score, _ = new_state.random_play()
     return total_score
 
 
@@ -120,7 +120,7 @@ class MonteCarloTreeSearch:
 
         while not done:
             action = self.find_next_move(board.matrix())
-            matrix, done, value, score, can_move_dir = board.step(action)
+            matrix, reward, done, value, score, can_move_dir = board.step(action)
 
             index += 1
 
