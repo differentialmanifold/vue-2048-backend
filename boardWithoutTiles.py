@@ -15,19 +15,20 @@ class TileForTrain:
 
 
 class BoardForTrain:
-    size = 2
     action_space = 4
     fourProbability = 0.1
     delta_x = [-1, 0, 1, 0]
     delta_y = [0, -1, 0, 1]
 
-    def __init__(self, matrix=None):
+    def __init__(self, matrix=None, size=2):
+        self.size = size
+
         if matrix is None:
-            self.cells = [[self.add_tile() for _ in range(BoardForTrain.size)] for _ in range(BoardForTrain.size)]
+            self.cells = [[self.add_tile() for _ in range(self.size)] for _ in range(self.size)]
             self.add_random_tile()
         else:
-            self.cells = [[self.add_tile(matrix[i][j]) for j in range(BoardForTrain.size)] for i in
-                          range(BoardForTrain.size)]
+            self.cells = [[self.add_tile(matrix[i][j]) for j in range(self.size)] for i in
+                          range(self.size)]
 
         self.set_positions()
         self.has_changed = True
@@ -41,8 +42,8 @@ class BoardForTrain:
 
     def copy(self):
         board_copy = BoardForTrain()
-        board_copy.cells = [[TileForTrain(self.cells[i][j].value, i, j) for j in range(BoardForTrain.size)] for i in
-                            range(BoardForTrain.size)]
+        board_copy.cells = [[TileForTrain(self.cells[i][j].value, i, j) for j in range(self.size)] for i in
+                            range(self.size)]
         board_copy.has_changed = self.has_changed
         board_copy.max_value = self.max_value
         board_copy.total_score = self.total_score
@@ -63,10 +64,10 @@ class BoardForTrain:
 
     def move_left(self):
         has_changed = False
-        for row in range(BoardForTrain.size):
+        for row in range(self.size):
             current_row = [tile for tile in self.cells[row] if tile.value != 0]
-            result_row = [None for _ in range(BoardForTrain.size)]
-            for target in range(BoardForTrain.size):
+            result_row = [None for _ in range(self.size)]
+            for target in range(self.size):
                 target_tile = current_row.pop(0) if len(current_row) > 0 else self.add_tile()
                 if len(current_row) > 0 and current_row[0].value == target_tile.value:
                     target_tile = self.add_tile(target_tile.value)
@@ -78,14 +79,14 @@ class BoardForTrain:
         return has_changed
 
     def set_positions(self):
-        for i in range(BoardForTrain.size):
-            for j in range(BoardForTrain.size):
+        for i in range(self.size):
+            for j in range(self.size):
                 tile = self.cells[i][j]
                 tile.row = i
                 tile.column = j
 
     def add_random_tile(self):
-        empty_cells = [{'row': i, 'column': j} for i in range(BoardForTrain.size) for j in range(BoardForTrain.size) if
+        empty_cells = [{'row': i, 'column': j} for i in range(self.size) for j in range(self.size) if
                        self.cells[i][j].value == 0]
         _index = random.choice(range(len(empty_cells)))
         cell = empty_cells[_index]
@@ -116,8 +117,8 @@ class BoardForTrain:
         1. first cell is empty and second cell is not empty
         2. two cells not empty and value is equal
         """
-        for row in range(BoardForTrain.size):
-            for column in range(BoardForTrain.size - 1):
+        for row in range(self.size):
+            for column in range(self.size - 1):
                 first_value = self.cells[row][column].value
                 second_value = self.cells[row][column + 1].value
                 if first_value == 0 and second_value != 0:
@@ -141,8 +142,8 @@ class BoardForTrain:
         return self.has_lost()
 
     def matrix(self):
-        matrix_value = [[self.cells[row][column].value for column in range(BoardForTrain.size)] for row in
-                        range(BoardForTrain.size)]
+        matrix_value = [[self.cells[row][column].value for column in range(self.size)] for row in
+                        range(self.size)]
         return np.array(matrix_value)
 
     def env_init(self):
@@ -199,8 +200,8 @@ class BoardForTrain:
 
                 moved_matrix = board_for_train.matrix()
                 if has_changed:
-                    empty_cells = [{'row': i, 'column': j} for i in range(BoardForTrain.size) for j in
-                                   range(BoardForTrain.size) if
+                    empty_cells = [{'row': i, 'column': j} for i in range(self.size) for j in
+                                   range(self.size) if
                                    board_for_train.cells[i][j].value == 0]
 
                     for _index in range(len(empty_cells)):
@@ -247,20 +248,20 @@ class BoardForTrain:
         if len(tuple_value) != self.power(self.size, 2):
             raise ValueError("tuple not match matrix")
 
-        matrix_value = np.zeros(shape=[BoardForTrain.size, BoardForTrain.size])
+        matrix_value = np.zeros(shape=[self.size, self.size])
 
-        for i in range(BoardForTrain.size):
-            for j in range(BoardForTrain.size):
-                tuple_item = tuple_value[BoardForTrain.size * i + j]
+        for i in range(self.size):
+            for j in range(self.size):
+                tuple_item = tuple_value[self.size * i + j]
                 if tuple_item != 0:
                     matrix_value[i][j] = self.power(2, tuple_item)
         return matrix_value
 
     def transferMatrixToTuple(self, matrix_value):
         tuple_arr = np.zeros(shape=matrix_value.size)
-        for i in range(BoardForTrain.size):
-            for j in range(BoardForTrain.size):
-                tuple_arr[BoardForTrain.size * i + j] = self.log(2, matrix_value[i][j])
+        for i in range(self.size):
+            for j in range(self.size):
+                tuple_arr[self.size * i + j] = self.log(2, matrix_value[i][j])
         return tuple(tuple_arr)
 
 

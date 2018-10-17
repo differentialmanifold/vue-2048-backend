@@ -2,6 +2,7 @@ import sys
 import itertools
 import os
 import pickle
+import argparse
 import numpy as np
 from collections import defaultdict
 
@@ -49,7 +50,7 @@ def make_epsilon_greedy_policy(Q, epsilon, nA):
     return policy_fn
 
 
-def q_learning(env, discount_factor=1.0, alpha=0.5, epsilon=0.1):
+def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
     """
     Q-Learning algorithm: Off-policy TD control. Finds the optimal greedy policy
     while following an epsilon-greedy policy
@@ -107,7 +108,7 @@ def q_learning(env, discount_factor=1.0, alpha=0.5, epsilon=0.1):
                 break
 
         # Print out which episode we're on, useful for debugging.
-        if (i_episode + 1) % 100 == 0:
+        if (i_episode + 1) % args['outputInterval'] == 0:
             print('----------')
             print("Episode {}.".format(i_episode + 1))
             test_Q(tensorBoardPlot, Q, i_episode)
@@ -164,6 +165,11 @@ def test_Q(tensorBoardPlot, Q, step):
 
 
 if __name__ == '__main__':
-    board_without_tiles = BoardForTrain()
+    parser = argparse.ArgumentParser(description='Description of your program')
+    parser.add_argument('--size', help='size of matrix, 2x2,3x3,4x4', default=2)
+    parser.add_argument('--outputInterval', help='interval to print test value', default=100)
+    args = vars(parser.parse_args())
 
-    Q = q_learning(board_without_tiles)
+    board_without_tiles = BoardForTrain(size=args['size'])
+
+    Q = q_learning(board_without_tiles, args)
