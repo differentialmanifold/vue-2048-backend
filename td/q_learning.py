@@ -1,7 +1,7 @@
 import sys
 import itertools
 import os
-import random
+import time
 import argparse
 import numpy as np
 from collections import namedtuple
@@ -165,8 +165,11 @@ def q_learning(env,
             print("Episode {}.".format(i_episode + 1))
             test_Q(tensorBoardPlot, env, Q, i_episode)
 
+            print('start saving with {} state'.format(len(add_saved_obj)))
+            current_time = time.time()
             saved_obj = {'q': add_saved_obj, 'step': i_episode}
             my_redis.store_td(saved_obj)
+            print('save cost {} second'.format(time.time() - current_time))
 
     return Q
 
