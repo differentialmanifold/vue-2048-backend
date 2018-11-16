@@ -1,21 +1,16 @@
 import sys
 import itertools
 import os
-import pickle
+import random
 import argparse
 import numpy as np
-from collections import defaultdict
+from collections import namedtuple
 
 if "../" not in sys.path:
     sys.path.append("../")
 from boardWithoutTiles import BoardForTrain
 from tensorBoard.tesorBoardPlot import TensorBoardPlot
-
-q_learning_scope = 'q_learning'
-
-
-def actions():
-    return np.zeros(4)
+from my_redis.my_redis import MyRedis
 
 
 def make_epsilon_greedy_policy(Q, epsilon, nA):
@@ -50,7 +45,21 @@ def make_epsilon_greedy_policy(Q, epsilon, nA):
     return policy_fn
 
 
-def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
+def transferMatrixToState(matrix, env, Q):
+    state = env.transferMatrixToTuple(matrix)
+    if state not in Q:
+        Q[state] = np.zeros(4)
+    return state
+
+
+def q_learning(env,
+               args,
+               replay_memory_size=50000,
+               replay_memory_init_size=5000,
+               batch_size=32,
+               discount_factor=1.0,
+               alpha=0.5,
+               epsilon=0.1):
     """
     Q-Learning algorithm: Off-policy TD control. Finds the optimal greedy policy
     while following an epsilon-greedy policy
@@ -64,25 +73,53 @@ def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
     Returns:
         Q is the optimal action-value function, a dictionary mapping state -> action values.
     """
+    q_learning_scope = args['scope']
 
     # The final action-value function.
     # A nested dictionary that maps state -> (action -> action-value).
-    # if os.path.isfile(q_learning_scope + '.pickle'):
-    #     with open(q_learning_scope + '.pickle', 'rb') as f:
-    #         Q = pickle.load(f)
-    # else:
-    #     Q = defaultdict(actions)
-    Q = defaultdict(actions)
+    my_redis = MyRedis(q_learning_scope)
+    saved_obj = my_redis.restore_td()
+
+    if saved_obj is None:
+        Q = dict()
+        total_step = 0
+    else:
+        Q = saved_obj['q']
+        total_step = saved_obj['step'] + 1
 
     tensorBoardPlot = TensorBoardPlot(scope=q_learning_scope, summaries_dir=os.path.dirname(os.path.abspath(__file__)))
 
     # The policy we're following
     policy = make_epsilon_greedy_policy(Q, epsilon, env.action_space)
 
-    for i_episode in itertools.count():
+    # The replay memory
+    replay_memory = []
+    Transition = namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
+    # Populate the replay memory with initial experience
+    # print("Populating replay memory...")
+    # matrix, can_move_dir = env.reset()
+    # state = transferMatrixToState(matrix, env, Q)
+    # for i in range(replay_memory_init_size):
+    #     action_probs = policy(state, can_move_dir)
+    #     action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+    #     next_matrix, reward, done, _, _, next_can_move_dir = env.step(action)
+    #     next_state = transferMatrixToState(next_matrix, env, Q)
+    #     replay_memory.append(Transition(state, action, reward, next_state, done))
+    #     if done:
+    #         matrix, can_move_dir = env.reset()
+    #         state = transferMatrixToState(matrix, env, Q)
+    #     else:
+    #         state = next_state
+    #         can_move_dir = next_can_move_dir
+    # print("Init replay finished")
+
+    # added part saved to redis
+    add_saved_obj = dict()
+
+    for i_episode in itertools.count(start=total_step):
         # Reset the environment and pick the first action
         matrix, can_move_dir = env.reset()
-        state = env.transferMatrixToTuple(matrix)
+        state = transferMatrixToState(matrix, env, Q)
 
         # One step in the environment
         episode_length = 0
@@ -92,15 +129,29 @@ def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
             action_probs = policy(state, can_move_dir)
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_matrix, reward, done, _, _, next_can_move_dir = env.step(action)
-            next_state = env.transferMatrixToTuple(next_matrix)
+            next_state = transferMatrixToState(next_matrix, env, Q)
 
-            episode_length = t
+            # # If our replay memory is full, pop the first element
+            # if len(replay_memory) == replay_memory_size:
+            #     replay_memory.pop(0)
+            #
+            # # Save transition to replay memory
+            # replay_memory.append(Transition(state, action, reward, next_state, done))
+            #
+            # # TD Update
+            # # Sample a minibatch from the replay memory
+            # samples = random.sample(replay_memory, batch_size)
+            # for sample in samples:
+            #     best_next_action = np.argmax(Q[sample.next_state])
+            #     td_target = sample.reward + discount_factor * Q[sample.next_state][best_next_action]
+            #     td_delta = td_target - Q[sample.state][sample.action]
+            #     Q[sample.state][sample.action] += alpha * td_delta
 
-            # TD Update
             best_next_action = np.argmax(Q[next_state])
             td_target = reward + discount_factor * Q[next_state][best_next_action]
             td_delta = td_target - Q[state][action]
             Q[state][action] += alpha * td_delta
+            add_saved_obj[state] = Q[state]
 
             state = next_state
             can_move_dir = next_can_move_dir
@@ -112,15 +163,15 @@ def q_learning(env, args, discount_factor=1.0, alpha=0.5, epsilon=0.1):
         if (i_episode + 1) % int(args['outputInterval']) == 0:
             print('----------')
             print("Episode {}.".format(i_episode + 1))
-            test_Q(tensorBoardPlot, Q, i_episode)
+            test_Q(tensorBoardPlot, env, Q, i_episode)
 
-            # with open(q_learning_scope + '.pickle', 'wb') as f:
-            #     pickle.dump(Q, f, pickle.HIGHEST_PROTOCOL)
+            saved_obj = {'q': add_saved_obj, 'step': i_episode}
+            my_redis.store_td(saved_obj)
 
     return Q
 
 
-def test_Q(tensorBoardPlot, Q, step):
+def test_Q(tensorBoardPlot, env, Q, step):
     board_without_tiles = BoardForTrain(size=int(args['size']))
 
     policy = make_epsilon_greedy_policy(Q, 0, board_without_tiles.action_space)
@@ -132,7 +183,7 @@ def test_Q(tensorBoardPlot, Q, step):
     for i in range(test_episodes):
         board_without_tiles = BoardForTrain(size=int(args['size']))
         while not board_without_tiles.has_done():
-            status = board_without_tiles.transferMatrixToTuple(board_without_tiles.matrix())
+            status = transferMatrixToState(board_without_tiles.matrix(), env, Q)
             action = np.argmax(policy(status, board_without_tiles.can_move_dir))
             board_without_tiles.move(action)
         matrix = board_without_tiles.matrix()
@@ -169,6 +220,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Description of your program')
     parser.add_argument('--size', help='size of matrix, 2x2,3x3,4x4', default=2)
     parser.add_argument('--outputInterval', help='interval to print test value', default=100)
+    parser.add_argument('--scope', help='scope for saving in redis and tensorboard', default='tencent2')
     args = vars(parser.parse_args())
 
     board_without_tiles = BoardForTrain(size=int(args['size']))

@@ -245,6 +245,7 @@ class BoardForTrain:
         return result
 
     def transferTupleToMatrix(self, tuple_value):
+        tuple_value = [int(item) for item in tuple_value.split('_')]
         if len(tuple_value) != self.power(self.size, 2):
             raise ValueError("tuple not match matrix")
 
@@ -262,7 +263,7 @@ class BoardForTrain:
         for i in range(self.size):
             for j in range(self.size):
                 tuple_arr[self.size * i + j] = self.log(2, matrix_value[i][j])
-        return tuple(tuple_arr)
+        return '_'.join(map(str, map(int, tuple_arr)))
 
 
 if __name__ == "__main__":
