@@ -165,10 +165,12 @@ def q_learning(env,
             print("Episode {}.".format(i_episode + 1))
             test_Q(tensorBoardPlot, env, Q, i_episode)
 
+        if (i_episode + 1) % (int(args['outputInterval']) * 10) == 0:
             print('start saving with {} state'.format(len(add_saved_obj)))
             current_time = time.time()
             saved_obj = {'q': add_saved_obj, 'step': i_episode}
             my_redis.store_td(saved_obj)
+            add_saved_obj = dict()
             print('save cost {} second'.format(time.time() - current_time))
 
     return Q
