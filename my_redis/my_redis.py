@@ -3,7 +3,7 @@ import numpy as np
 
 host = '127.0.0.1'
 port = 6379
-password = '***'
+password = None
 
 
 class MyRedis:

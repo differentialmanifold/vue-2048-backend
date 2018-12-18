@@ -5,9 +5,9 @@ import os
 
 
 class TensorBoardPlot:
-    def __init__(self, scope="estimator", summaries_dir=os.path.dirname(os.path.abspath(__file__))):
+    def __init__(self, scope="estimator"):
         self.scope = scope
-        summary_dir = os.path.join(summaries_dir, "summaries_{}".format(scope))
+        summary_dir = os.path.join(os.path.expanduser('~/Developer/python/tensorboard'), 'summaries_{}'.format(scope))
         if not os.path.exists(summary_dir):
             os.makedirs(summary_dir)
         self.summary_writer = tf.summary.FileWriter(summary_dir)
