@@ -17,4 +17,4 @@ class TensorBoardPlot:
         episode_summary = tf.Summary()
         episode_summary.value.add(simple_value=value, node_name=key, tag=key)
         self.summary_writer.add_summary(episode_summary, step)
-        # self.summary_writer.flush()
+        self.summary_writer.flush()
