@@ -34,14 +34,17 @@ class Estimator:
         Builds the Tensorflow graph.
         """
 
+        def preprocess(x):
+            return 1 / (1 + keras.backend.log(1 + x))
+
         main_input = Input(shape=(self.model_size, self.model_size), name='main_input')
         x = Flatten()(main_input)
-        # x = BatchNormalization()(x)
+        x = Lambda(preprocess)(x)
         x = Dense(256, name='first_layer')(x)
         # x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = Dense(256, name='second_layer')(x)
-        x = BatchNormalization()(x)
+        # x = BatchNormalization()(x)
         x = Activation('relu')(x)
         value_function_output = Dense(4, name='value_function_output')(x)
 
