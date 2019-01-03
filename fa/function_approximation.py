@@ -38,14 +38,14 @@ class Estimator:
             return 1 / (1 + keras.backend.log(1 + x))
 
         main_input = Input(shape=(self.model_size, self.model_size), name='main_input')
-        x = Flatten()(main_input)
-        x = Lambda(preprocess)(x)
+        x = Flatten(name='flatten')(main_input)
+        x = Lambda(preprocess, name='preprocess')(x)
         x = Dense(256, name='first_layer')(x)
         # x = BatchNormalization()(x)
-        x = Activation('relu')(x)
+        x = Activation('relu', name='relu')(x)
         x = Dense(256, name='second_layer')(x)
         # x = BatchNormalization()(x)
-        x = Activation('relu')(x)
+        x = Activation('relu', name='relu_2')(x)
         value_function_output = Dense(4, name='value_function_output')(x)
 
         action_input = Input(shape=(4,), name='action_input')
@@ -125,6 +125,12 @@ class Estimator:
         return self.update(s, a, y)
 
 
+def copy_weights(from_model, to_model):
+    for layer in to_model.layers:
+        from_layer = from_model.get_layer(layer.name)
+        layer.set_weights(from_layer.get_weights())
+
+
 def make_epsilon_greedy_policy(estimator, epsilon, nA):
     """
     Creates an epsilon-greedy policy based on a given Q-function and epsilon.
@@ -160,6 +166,7 @@ def q_learning(env,
                batch_size=32,
                discount_factor=1.0,
                alpha=0.5,
+               update_target_estimator_every=10,
                epsilon=0.1):
     """
     Q-Learning algorithm: Off-policy TD control. Finds the optimal greedy policy
@@ -173,7 +180,11 @@ def q_learning(env,
     """
     q_learning_scope = args['scope'] + str(args['size'])
 
+    target_scope = 'target_state'
+
     estimator = Estimator(model_size=args['size'], scope=q_learning_scope)
+
+    target_estimator = Estimator(model_size=args['size'], scope=target_scope)
 
     total_step = 0
 
@@ -201,6 +212,10 @@ def q_learning(env,
     print("Init replay finished")
 
     for i_episode in itertools.count(start=total_step):
+
+        # update target estimator parameters
+        if i_episode % update_target_estimator_every == 0:
+            copy_weights(estimator.model, target_estimator.model)
 
         # Reset the environment and pick the first action
         state, can_move_dir = env.reset()
@@ -247,7 +262,7 @@ def q_learning(env,
             batch_done = np.array(batch_done)
             batch_reward = np.array(batch_reward)
 
-            batch_next_value_function = estimator.predict(batch_next_state)
+            batch_next_value_function = target_estimator.predict(batch_next_state)
             batch_next_q_value = np.amax(batch_next_value_function, axis=1)
             batch_next_q_value = batch_next_q_value * (batch_done.astype(float))
 
