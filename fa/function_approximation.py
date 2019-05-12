@@ -12,7 +12,7 @@ from keras.optimizers import Adam
 if "../" not in sys.path:
     sys.path.append("../")
 from boardWithoutTiles import BoardForTrain
-from tensorBoard.tesorBoardPlot import TensorBoardPlot
+from tensorBoard.tensorBoardPlot import TensorBoardPlot
 from model_save.model_save import ModelSave
 
 

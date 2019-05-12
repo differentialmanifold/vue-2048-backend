@@ -9,7 +9,7 @@ from collections import namedtuple
 if "../" not in sys.path:
     sys.path.append("../")
 from boardWithoutTiles import BoardForTrain
-from tensorBoard.tesorBoardPlot import TensorBoardPlot
+from tensorBoard.tensorBoardPlot import TensorBoardPlot
 from my_redis.my_redis import MyRedis
 
 
