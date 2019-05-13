@@ -226,6 +226,8 @@ if __name__ == '__main__':
     parser.add_argument('--size', help='size of matrix, 2x2,3x3,4x4', default=2)
     parser.add_argument('--outputInterval', help='interval to print test value', default=100)
     parser.add_argument('--scope', help='scope for saving in redis and tensorboard', default='tencent2')
+    parser.add_argument('--summaries_dir', help='directory for tensorboard',
+                        default=os.path.expanduser('~/tensorboard'))
     args = vars(parser.parse_args())
 
     board_without_tiles = BoardForTrain(size=int(args['size']))
