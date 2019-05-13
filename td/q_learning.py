@@ -87,7 +87,7 @@ def q_learning(env,
         Q = saved_obj['q']
         total_step = saved_obj['step'] + 1
 
-    tensorBoardPlot = TensorBoardPlot(scope=q_learning_scope, summaries_dir=os.path.dirname(os.path.abspath(__file__)))
+    tensorBoardPlot = TensorBoardPlot(scope=q_learning_scope, summaries_dir=args['summaries_dir'])
 
     # The policy we're following
     policy = make_epsilon_greedy_policy(Q, epsilon, env.action_space)
