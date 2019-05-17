@@ -1,7 +1,6 @@
 import sys
 import itertools
 import os
-import time
 import argparse
 import numpy as np
 from collections import namedtuple
@@ -144,7 +143,7 @@ def q_learning(env,
             state_value = my_redis.hget_q(state)
             next_state_value = my_redis.hget_q(next_state)
 
-            if add_saved_obj[state] is None:
+            if state not in add_saved_obj:
                 add_saved_obj[state] = state_value
 
             best_next_action = np.argmax(next_state_value)
