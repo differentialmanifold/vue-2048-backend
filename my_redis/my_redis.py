@@ -45,3 +45,32 @@ class MyRedis:
         restore_dicts['q'] = temp_dicts
 
         return restore_dicts
+
+    def hlen_q(self):
+        name = self.scope + ':q'
+        value = self.my_redis.hlen(name)
+
+        return value
+
+    def hget_q(self, key):
+        name = self.scope + ':q'
+        value = self.my_redis.hget(name, key)
+
+        if value is None:
+            return np.zeros(4)
+        return np.array([float(item) for item in value.decode('utf-8').split('_')])
+
+    def hset_q(self, key, value):
+        name = self.scope + ':q'
+        self.my_redis.hset(name, key, '_'.join(['{:0.3f}'.format(value) for value in value]))
+
+    def get_step(self):
+        value = self.my_redis.get(self.scope + ':step').decode('utf-8')
+
+        if value is None:
+            return -1
+
+        return int(value)
+
+    def set_step(self, value):
+        self.my_redis.set(self.scope + ':step', value)
